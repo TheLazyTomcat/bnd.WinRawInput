@@ -12,9 +12,9 @@
   Constants, structures, external functions definitions and macros (here
   implemented as normal functions) used in handling of raw input in Windows OS.
 
-  ©František Milt 2016-02-12
+  ©František Milt 2016-04-29
 
-  Version 1.0
+  Version 1.1
 
 ===============================================================================}
 unit WinRawInput;
@@ -83,6 +83,7 @@ const
   RIDEV_NOLEGACY     = $00000030;
   RIDEV_PAGEONLY     = $00000020;
   RIDEV_REMOVE       = $00000001;
+  RIDEV_EXMODEMASK   = $000000F0;
 
 {
   Values for fields RAWINPUTDEVICELIST.dwType, RAWINPUTHEADER.dwType and
@@ -99,6 +100,7 @@ const
   MOUSE_MOVE_RELATIVE      = $00;
   MOUSE_MOVE_ABSOLUTE      = $01;
   MOUSE_VIRTUAL_DESKTOP    = $02;
+  MOUSE_MOVE_NOCOALESCE    = $08;
 
 {
   Values for field RAWMOUSE.usButtonFlags.
@@ -124,10 +126,12 @@ const
 {
   Values for field RAWKEYBOARD.Flags.
 }
-  RI_KEY_BREAK = 1;
-  RI_KEY_E0    = 2;
-  RI_KEY_E1    = 4;
-  RI_KEY_MAKE  = 0;
+  RI_KEY_BREAK           = 1;
+  RI_KEY_E0              = 2;
+  RI_KEY_E1              = 4;
+  RI_KEY_MAKE            = 0;
+  RI_KEY_TERMSRV_SET_LED = 8;
+  RI_KEY_TERMSRV_SHADOW  = $10;
 
 {
   Values for parameter uiCommand in function GetRawInputData.
@@ -443,6 +447,31 @@ Function RegisterRawInputDevices(
 Function GET_RAWINPUT_CODE_WPARAM(wParam: WPARAM): WPARAM;
 Function RAWINPUT_ALIGN(x: Pointer): Pointer;
 Function NEXTRAWINPUTBLOCK(ptr: PRAWINPUT): PRAWINPUT;
+Function RIDEV_EXMODE(Mode: DWORD): DWORD;
+Function GET_DEVICE_CHANGE_WPARAM(wParam: wParam): wParam;
+Function GET_DEVICE_CHANGE_LPARAM(lParam: lParam): lParam;
+
+{==============================================================================}
+{   Auxiliary types and functions                                              }
+{==============================================================================}
+
+{$IFDEF 32bit}
+type
+  TRawInputWoW64 = record
+    header:   RAWINPUTHEADER;
+    padding:  Int64;
+    case Integer of
+      RIM_TYPEMOUSE:   (mouse:     RAWMOUSE);
+      RIM_TYPEKEYBOARD:(keyboard:  RAWKEYBOARD);
+      RIM_TYPEHID:     (hid:       RAWHID);
+  end;
+  PRawInputWoW64 = ^TRawInputWoW64;
+
+
+Function WoW64Conversion(RawInput: TRawInputWoW64): RAWINPUT; overload;
+procedure WoW64Conversion(Data: Pointer); overload;
+{$ENDIF}
+
 
 implementation
 
@@ -473,5 +502,47 @@ Function NEXTRAWINPUTBLOCK(ptr: PRAWINPUT): PRAWINPUT;
 begin
 Result := PRAWINPUT(RAWINPUT_ALIGN({%H-}Pointer({%H-}PtrUInt(ptr) + ptr^.header.dwSize)));
 end;
+
+//------------------------------------------------------------------------------
+
+Function RIDEV_EXMODE(Mode: DWORD): DWORD;
+begin
+Result := Mode and RIDEV_EXMODEMASK;
+end;
+
+//------------------------------------------------------------------------------
+
+Function GET_DEVICE_CHANGE_WPARAM(wParam: wParam): wParam;
+begin
+Result := LoWord(wParam);
+end;
+
+//------------------------------------------------------------------------------
+
+Function GET_DEVICE_CHANGE_LPARAM(lParam: lParam): lParam;
+begin
+Result := LoWord(lParam);
+end;
+
+//==============================================================================
+
+{$IFDEF 32bit}
+Function WoW64Conversion(RawInput: TRawInputWoW64): RAWINPUT; overload;
+begin
+Result.header := RawInput.header;
+Result.header.dwSize := SizeOf(RAWINPUT);
+Result.mouse := RawInput.mouse;
+end;
+ 
+//------------------------------------------------------------------------------
+
+procedure WoW64Conversion(Data: Pointer); overload;
+var
+  DataOffset: PtrUInt;
+begin
+DataOffset := {%H-}PtrUInt(Addr(TRawInputWoW64(nil^).mouse));
+Move({%H-}Pointer({%H-}PtrUInt(Data) + DataOffset)^,Addr(PRawInput(Data)^.mouse)^,PRawInput(Data)^.header.dwSize - DataOffset);
+end;
+{$ENDIF}
 
 end.
