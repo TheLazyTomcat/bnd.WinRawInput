@@ -12,9 +12,9 @@
   Constants, structures, external functions definitions and macros (here
   implemented as normal functions) used in handling of raw input in Windows OS.
 
-  ©František Milt 2016-04-29
+  ©František Milt 2016-05-06
 
-  Version 1.1
+  Version 1.2
 
 ===============================================================================}
 unit WinRawInput;
@@ -55,8 +55,8 @@ const
 {
   Codes of windows messages tied to raw input.
 }
-  WM_INPUT               = $00FF;
   WM_INPUT_DEVICE_CHANGE = $00FE;
+  WM_INPUT               = $00FF;
 
 {
   Possible values of wParam in WM_INPUT message.
@@ -73,33 +73,34 @@ const
 {
   Values for field RAWINPUTDEVICE.dwFlags.
 }
-  RIDEV_APPKEYS      = $00000400;
-  RIDEV_CAPTUREMOUSE = $00000200;
-  RIDEV_DEVNOTIFY    = $00002000;
+  RIDEV_REMOVE       = $00000001;
   RIDEV_EXCLUDE      = $00000010;
-  RIDEV_EXINPUTSINK  = $00001000;
+  RIDEV_PAGEONLY     = $00000020;
+  RIDEV_NOLEGACY     = $00000030;
   RIDEV_INPUTSINK    = $00000100;
   RIDEV_NOHOTKEYS    = $00000200;
-  RIDEV_NOLEGACY     = $00000030;
-  RIDEV_PAGEONLY     = $00000020;
-  RIDEV_REMOVE       = $00000001;
+  RIDEV_CAPTUREMOUSE = $00000200;
+  RIDEV_APPKEYS      = $00000400;
+  RIDEV_EXINPUTSINK  = $00001000;
+  RIDEV_DEVNOTIFY    = $00002000;
   RIDEV_EXMODEMASK   = $000000F0;
 
 {
   Values for fields RAWINPUTDEVICELIST.dwType, RAWINPUTHEADER.dwType and
   RID_DEVICE_INFO.dwType.
 }
-  RIM_TYPEHID      = 2;
-  RIM_TYPEKEYBOARD = 1;
   RIM_TYPEMOUSE    = 0;
+  RIM_TYPEKEYBOARD = 1;
+  RIM_TYPEHID      = 2;
+  RIM_TYPEMAX      = 2;
 
 {
   Values for field RAWMOUSE.usFlags.
 }
-  MOUSE_ATTRIBUTES_CHANGED = $04;
   MOUSE_MOVE_RELATIVE      = $00;
   MOUSE_MOVE_ABSOLUTE      = $01;
   MOUSE_VIRTUAL_DESKTOP    = $02;
+  MOUSE_ATTRIBUTES_CHANGED = $04;
   MOUSE_MOVE_NOCOALESCE    = $08;
 
 {
@@ -107,10 +108,10 @@ const
 }
   RI_MOUSE_LEFT_BUTTON_DOWN   = $0001;
   RI_MOUSE_LEFT_BUTTON_UP     = $0002;
-  RI_MOUSE_MIDDLE_BUTTON_DOWN = $0010;
-  RI_MOUSE_MIDDLE_BUTTON_UP   = $0020;
   RI_MOUSE_RIGHT_BUTTON_DOWN  = $0004;
   RI_MOUSE_RIGHT_BUTTON_UP    = $0008;
+  RI_MOUSE_MIDDLE_BUTTON_DOWN = $0010;
+  RI_MOUSE_MIDDLE_BUTTON_UP   = $0020;
   RI_MOUSE_BUTTON_1_DOWN      = RI_MOUSE_LEFT_BUTTON_DOWN;
   RI_MOUSE_BUTTON_1_UP        = RI_MOUSE_LEFT_BUTTON_UP;
   RI_MOUSE_BUTTON_2_DOWN      = RI_MOUSE_RIGHT_BUTTON_DOWN;
@@ -122,29 +123,30 @@ const
   RI_MOUSE_BUTTON_5_DOWN      = $0100;
   RI_MOUSE_BUTTON_5_UP        = $0200;
   RI_MOUSE_WHEEL              = $0400;
+  RI_MOUSE_HWHEEL             = $0800;  // Windows Vista+
 
 {
   Values for field RAWKEYBOARD.Flags.
 }
+  RI_KEY_MAKE            = 0;
   RI_KEY_BREAK           = 1;
   RI_KEY_E0              = 2;
   RI_KEY_E1              = 4;
-  RI_KEY_MAKE            = 0;
   RI_KEY_TERMSRV_SET_LED = 8;
   RI_KEY_TERMSRV_SHADOW  = $10;
 
 {
   Values for parameter uiCommand in function GetRawInputData.
 }
-  RID_HEADER = $10000005;
   RID_INPUT  = $10000003;
+  RID_HEADER = $10000005;
 
 {
   Values for parameter uiCommand in function GetRawInputDeviceInfo.
 }
+  RIDI_PREPARSEDDATA = $20000005;
   RIDI_DEVICENAME    = $20000007;
   RIDI_DEVICEINFO    = $2000000b;
-  RIDI_PREPARSEDDATA = $20000005;
 
 {
   Other raw input constants.
@@ -457,6 +459,12 @@ Function GET_DEVICE_CHANGE_LPARAM(lParam: lParam): lParam;
 
 {$IFDEF 32bit}
 type
+{
+  Structure that is designed to be used to acces data returned by function
+  GetRawInputBuffer in WoW64 (data structures in the array returned by mentioned
+  function have different memory alignment in WoW64 then they have in native
+  32bit OS).
+}
   TRawInputWoW64 = record
     header:   RAWINPUTHEADER;
     padding:  Int64;
@@ -467,9 +475,20 @@ type
   end;
   PRawInputWoW64 = ^TRawInputWoW64;
 
-
+{
+  Converts RAWINPUT structure that have WoW64 memory alignment to normal 32bit
+  structure.
+}
 Function WoW64Conversion(RawInput: TRawInputWoW64): RAWINPUT; overload;
-procedure WoW64Conversion(Data: Pointer); overload;
+
+{
+  Performs in-place conversion from RAWINPUT structure with WoW64 memory
+  aligment to normal 32bit structure - it shifts data (that is, field
+  mouse/keyboard/hid) down by 8 bytes. When ChangeSize is true, the size stored
+  in structure's header is decreased by 8, otherwise it is not changed.
+  Data parameter MUST point to the start of TRawInputWoW64 structure.
+}
+procedure WoW64Conversion(Data: Pointer; ChangeSize: Boolean = False); overload;
 {$ENDIF}
 
 
@@ -527,7 +546,7 @@ end;
 //==============================================================================
 
 {$IFDEF 32bit}
-Function WoW64Conversion(RawInput: TRawInputWoW64): RAWINPUT; overload;
+Function WoW64Conversion(RawInput: TRawInputWoW64): RAWINPUT;
 begin
 Result.header := RawInput.header;
 Result.header.dwSize := SizeOf(RAWINPUT);
@@ -536,12 +555,14 @@ end;
  
 //------------------------------------------------------------------------------
 
-procedure WoW64Conversion(Data: Pointer); overload;
+procedure WoW64Conversion(Data: Pointer; ChangeSize: Boolean = False); 
 var
   DataOffset: PtrUInt;
 begin
 DataOffset := {%H-}PtrUInt(Addr(TRawInputWoW64(nil^).mouse));
 Move({%H-}Pointer({%H-}PtrUInt(Data) + DataOffset)^,Addr(PRawInput(Data)^.mouse)^,PRawInput(Data)^.header.dwSize - DataOffset);
+If ChangeSize then
+  Dec(PRawInput(Data)^.header.dwSize,8);
 end;
 {$ENDIF}
 
