@@ -460,7 +460,7 @@ Function GET_DEVICE_CHANGE_LPARAM(lParam: lParam): lParam;
 {$IFDEF 32bit}
 type
 {
-  Structure that is designed to be used to acces data returned by function
+  Structure that is designed to be used to access data returned by function
   GetRawInputBuffer in WoW64 (data structures in the array returned by mentioned
   function have different memory alignment in WoW64 then they have in native
   32bit OS).
