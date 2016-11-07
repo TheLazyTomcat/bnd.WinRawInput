@@ -31,6 +31,10 @@ unit WinRawInput;
   {$MESSAGE FATAL 'Unsupported operating system.'}
 {$IFEND}
 
+{$IFDEF FPC}
+  {$MODE ObjFPC}{$H+}
+{$ENDIF}
+
 interface
 
 uses
