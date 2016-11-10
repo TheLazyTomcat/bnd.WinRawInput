@@ -16,6 +16,9 @@
 
   Version 1.2
 
+  Dependencies:
+    AuxTypes - github.com/ncs-sniper/Lib.AuxTypes  
+
 ===============================================================================}
 unit WinRawInput;
 
