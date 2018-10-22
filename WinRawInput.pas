@@ -12,9 +12,9 @@
   Constants, structures, external functions definitions and macros (here
   implemented as normal functions) used in handling of raw input in Windows OS.
 
-  ©František Milt 2016-05-06
+  ©František Milt 2018-10-22
 
-  Version 1.2
+  Version 1.2.1
 
   Dependencies:
     AuxTypes - github.com/ncs-sniper/Lib.AuxTypes  
@@ -36,8 +36,16 @@ unit WinRawInput;
 
 {$IFDEF FPC}
   {$MODE ObjFPC}{$H+}
+  {$INLINE ON}
+  {$DEFINE CanInline}
   {$DEFINE FPC_DisableWarns}
   {$MACRO ON}
+{$ELSE}
+  {$IF CompilerVersion >= 17 then}  // Delphi 2005+
+    {$DEFINE CanInline}
+  {$ELSE}
+    {$UNDEF CanInline}
+  {$IFEND}
 {$ENDIF}
 
 interface
@@ -455,12 +463,12 @@ Function RegisterRawInputDevices(
 {   Raw Input macros                                                           }
 {==============================================================================}
 
-Function GET_RAWINPUT_CODE_WPARAM(wParam: WPARAM): WPARAM;
-Function RAWINPUT_ALIGN(x: Pointer): Pointer;
-Function NEXTRAWINPUTBLOCK(ptr: PRAWINPUT): PRAWINPUT;
-Function RIDEV_EXMODE(Mode: DWORD): DWORD;
-Function GET_DEVICE_CHANGE_WPARAM(wParam: wParam): wParam;
-Function GET_DEVICE_CHANGE_LPARAM(lParam: lParam): lParam;
+Function GET_RAWINPUT_CODE_WPARAM(wParam: WPARAM): WPARAM;{$IFDEF CanInline} inline; {$ENDIF}
+Function RAWINPUT_ALIGN(x: Pointer): Pointer;{$IFDEF CanInline} inline; {$ENDIF}
+Function NEXTRAWINPUTBLOCK(ptr: PRAWINPUT): PRAWINPUT;{$IFDEF CanInline} inline; {$ENDIF}
+Function RIDEV_EXMODE(Mode: DWORD): DWORD;{$IFDEF CanInline} inline; {$ENDIF}
+Function GET_DEVICE_CHANGE_WPARAM(wParam: wParam): wParam;{$IFDEF CanInline} inline; {$ENDIF}
+Function GET_DEVICE_CHANGE_LPARAM(lParam: lParam): lParam;{$IFDEF CanInline} inline; {$ENDIF}
 
 {==============================================================================}
 {   Auxiliary types and functions                                              }
