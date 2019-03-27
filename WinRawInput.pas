@@ -15,6 +15,15 @@
   ©František Milt 2018-10-22
 
   Version 1.2.1
+  
+  Contacts:
+    František Milt: frantisek.milt@gmail.com
+
+  Support:
+    If you find this code useful, please consider supporting the author by
+    making a small donation using following link(s):
+
+      https://www.paypal.me/FMilt
 
   Dependencies:
     AuxTypes - github.com/ncs-sniper/Lib.AuxTypes  
