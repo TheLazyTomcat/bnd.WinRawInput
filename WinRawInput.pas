@@ -9,24 +9,32 @@
 
   WinRawInput
   
-  Constants, structures, external functions definitions and macros (here
-  implemented as normal functions) used in handling of raw input in Windows OS.
+    Constants, structures, external functions definitions and macros (here
+    implemented as normal functions) used in handling of raw input in Windows
+    operating system.
 
-  ©František Milt 2018-10-22
+  Version 1.2.2 (2019-10-02)
 
-  Version 1.2.1
-  
+  Last change 2019-10-02
+
+  ©2016-2019 František Milt  
+
   Contacts:
     František Milt: frantisek.milt@gmail.com
 
   Support:
-    If you find this code useful, please consider supporting the author by
-    making a small donation using following link(s):
+    If you find this code useful, please consider supporting its author(s) by
+    making a small donation using the following link(s):
 
       https://www.paypal.me/FMilt
 
+  Changelog:
+    For detailed changelog and history please refer to this git repository:
+
+      github.com/TheLazyTomcat/Bnd.WinRawInput
+
   Dependencies:
-    AuxTypes - github.com/ncs-sniper/Lib.AuxTypes  
+    AuxTypes - github.com/TheLazyTomcat/Lib.AuxTypes  
 
 ===============================================================================}
 unit WinRawInput;
@@ -60,7 +68,7 @@ unit WinRawInput;
 interface
 
 uses
-  Windows;
+  Windows, SysUtils;
 
 {
   Basic types used in Raw Input structures and function parameters.
@@ -74,9 +82,9 @@ type
 
   HRAWINPUT = THandle;
 
-{==============================================================================}
-{   Raw Input constants                                                        }
-{==============================================================================}
+{===============================================================================
+    Raw Input constants
+===============================================================================}
 const
 {
   Codes of windows messages tied to raw input.
@@ -91,7 +99,7 @@ const
   RIM_INPUTSINK = 1;
 
 {
-  Possible values of wParam in WM_INPUT_DEVICE_CHANGEmessage.
+  Possible values of wParam in WM_INPUT_DEVICE_CHANGE message.
 }
   GIDC_ARRIVAL = 1;
   GIDC_REMOVAL = 2;
@@ -180,9 +188,9 @@ const
   KEYBOARD_OVERRUN_MAKE_CODE = $FF;
 
 
-{==============================================================================}
-{   Raw Input structures                                                       }
-{==============================================================================}
+{===============================================================================
+    Raw Input structures
+===============================================================================}
 
 type
 {
@@ -379,9 +387,9 @@ type
   PRID_DEVICE_INFO = ^TRID_DEVICE_INFO;
  LPRID_DEVICE_INFO = ^TRID_DEVICE_INFO;  
 
-{==============================================================================}
-{   Raw Input functions                                                        }
-{==============================================================================}
+{===============================================================================
+    Raw Input functions
+===============================================================================}
 
 {
   https://msdn.microsoft.com/en-us/library/windows/desktop/ms645594(v=vs.85).aspx
@@ -468,9 +476,9 @@ Function RegisterRawInputDevices(
             uiNumDevices:     UINT;
             cbSize:           UINT): BOOL; stdcall; external user32;
 
-{==============================================================================}
-{   Raw Input macros                                                           }
-{==============================================================================}
+{===============================================================================
+    Raw Input macros
+===============================================================================}
 
 Function GET_RAWINPUT_CODE_WPARAM(wParam: WPARAM): WPARAM;{$IFDEF CanInline} inline; {$ENDIF}
 Function RAWINPUT_ALIGN(x: Pointer): Pointer;{$IFDEF CanInline} inline; {$ENDIF}
@@ -479,17 +487,16 @@ Function RIDEV_EXMODE(Mode: DWORD): DWORD;{$IFDEF CanInline} inline; {$ENDIF}
 Function GET_DEVICE_CHANGE_WPARAM(wParam: wParam): wParam;{$IFDEF CanInline} inline; {$ENDIF}
 Function GET_DEVICE_CHANGE_LPARAM(lParam: lParam): lParam;{$IFDEF CanInline} inline; {$ENDIF}
 
-{==============================================================================}
-{   Auxiliary types and functions                                              }
-{==============================================================================}
+{===============================================================================
+    Auxiliary types and functions
+===============================================================================}
 
-{$IFDEF 32bit}
 type
 {
   Structure that is designed to be used to access data returned by function
-  GetRawInputBuffer in WoW64 (data structures in the array returned by mentioned
-  function have different memory alignment in WoW64 then they have in native
-  32bit OS).
+  GetRawInputBuffer in WoW64 (data structures in the array returned by this
+  function have different memory alignment of fields in WoW64 then they have
+  in native 32bit OS).
 }
   TRawInputWoW64 = record
     header:   RAWINPUTHEADER;
@@ -501,22 +508,63 @@ type
   end;
   PRawInputWoW64 = ^TRawInputWoW64;
 
+//------------------------------------------------------------------------------
+
 {
   Converts RAWINPUT structure that have WoW64 memory alignment to normal 32bit
   structure.
+
+  Cannot convert values that contain HID data (field bRawData). For variables
+  containing large amount of HID data, use overload that accepts general
+  pointer and does in-place conversion.
+
+  Returns true when conversion was successfully completed, false otherwise
+  (eg. when RawInput contains too much of HID data) - in that case the
+  converted structure is filled with zeroes.
 }
-Function WoW64Conversion(RawInput: TRawInputWoW64): RAWINPUT; overload;
+Function ConvertFromWoW64(RawInput: TRawInputWoW64; out Converted: RAWINPUT): Boolean; overload;
+
+//------------------------------------------------------------------------------
+
+{
+  Converts RAWINPUT structure that have WoW64 memory alignment to normal 32bit
+  structure.
+
+  Cannot convert values that contain HID data (field bRawData).
+
+  If the conversion cannot be performed, the result is filled with zeroes.
+}
+Function ConvertFromWoW64(RawInput: TRawInputWoW64): RAWINPUT; overload;
+
+//------------------------------------------------------------------------------
 
 {
   Performs in-place conversion from RAWINPUT structure with WoW64 memory
   aligment to normal 32bit structure - it shifts data (that is, field
-  mouse/keyboard/hid) down by 8 bytes. When ChangeSize is true, the size stored
-  in structure's header is decreased by 8, otherwise it is not changed.
+  mouse/keyboard/hid) down by 8 bytes.
+
+  When ChangeSize is true, the size stored in structure's header is decreased
+  by 8, otherwise it is not changed.
+  Do not change stored size if you want to pass the pointer to NEXTRAWINPUTBLOCK
+  macro function.
+  
   Data parameter MUST point to the start of TRawInputWoW64 structure.
 }
-procedure WoW64Conversion(Data: Pointer; ChangeSize: Boolean = False); overload;
-{$ENDIF}
+procedure ConvertFromWoW64(Data: Pointer; ChangeSize: Boolean = False); overload;
 
+//------------------------------------------------------------------------------
+
+{
+  Indicates whether current process is running under WoW64.
+
+  For 64bit processes, it just returns false. For 32bit processes, it returns
+  true when IsWow64Process funtion is successfully loaded and it indicates the
+  process is running under WoW64, false otherwise.
+}
+Function IsWoW64: Boolean;
+
+type
+  EWRIException = class(Exception);
 
 implementation
 
@@ -580,26 +628,70 @@ end;
 
 //==============================================================================
 
-{$IFDEF 32bit}
-Function WoW64Conversion(RawInput: TRawInputWoW64): RAWINPUT;
+Function ConvertFromWoW64(RawInput: TRawInputWoW64; out Converted: RAWINPUT): Boolean;
 begin
-Result.header := RawInput.header;
-Result.header.dwSize := SizeOf(RAWINPUT);
-Result.mouse := RawInput.mouse;
+FillChar(Addr(Converted)^,SizeOf(Converted),0);
+If RawInput.header.dwSize <= SizeOf(RAWINPUT) then
+  begin
+    Converted.header := RawInput.header;
+    Result := True;
+    case RawInput.header.dwType of
+      RIM_TYPEMOUSE:    Converted.mouse := RawInput.mouse;
+      RIM_TYPEKEYBOARD: Converted.keyboard := RawInput.keyboard;
+      RIM_TYPEHID:      Converted.hid := RawInput.hid;
+    else
+      Result := False;
+    end;
+  end
+else Result := False;
 end;
- 
-//------------------------------------------------------------------------------
 
-procedure WoW64Conversion(Data: Pointer; ChangeSize: Boolean = False); 
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Function ConvertFromWoW64(RawInput: TRawInputWoW64): RAWINPUT;
+begin
+ConvertFromWoW64(RawInput,Result);
+end;
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+procedure ConvertFromWoW64(Data: Pointer; ChangeSize: Boolean = False);
 var
   DataOffset: PtrUInt;
 begin
 {$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
 DataOffset := PtrUInt(Addr(TRawInputWoW64(nil^).mouse));
-Move(Pointer(PtrUInt(Data) + DataOffset)^,Addr(PRawInput(Data)^.mouse)^,PRawInput(Data)^.header.dwSize - DataOffset);
+Move(Pointer(PtrUInt(Data) + DataOffset)^,Addr(PRawInput(Data)^.mouse)^,TMemSize(PRawInput(Data)^.header.dwSize) - TMemSize(DataOffset));
 {$IFDEF FPCDWM}{$POP}{$ENDIF}
 If ChangeSize then
   Dec(PRawInput(Data)^.header.dwSize,8);
+end;
+
+//------------------------------------------------------------------------------
+
+Function IsWoW64: Boolean;
+{$IFDEF 32bit}
+type     
+  TIsWoW64Process = Function(hProcess: THandle; Wow64Process: PBOOL): BOOL; stdcall;
+ var
+  ModuleHandle:   THandle;
+  IsWoW64Process: TIsWoW64Process;
+  ResultValue:    BOOL;
+begin
+Result := False;
+ModuleHandle := GetModuleHandle('kernel32.dll');  // do not FreeLibrary
+If ModuleHandle <> 0 then
+  begin
+    IsWoW64Process := TIsWoW64Process(GetProcAddress(ModuleHandle,'IsWow64Process'));
+    If Assigned(IsWoW64Process) then
+      If IsWoW64Process(GetCurrentProcess,@ResultValue) then
+        Result := ResultValue;
+  end
+else raise EWRIException.CreateFmt('Unable to get handle to module kernel32.dll (%.8x).',[GetLastError]);
+end;
+{$ELSE}
+begin
+Result := False;  // 64bit cannot run under wow64
 end;
 {$ENDIF}
 
