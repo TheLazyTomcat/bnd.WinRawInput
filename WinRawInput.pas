@@ -15,7 +15,7 @@
 
   Version 1.2.2 (2019-10-02)
 
-  Last change 2019-10-02
+  Last change 2020-03-06
 
   ©2016-2019 František Milt  
 
@@ -673,7 +673,7 @@ Function IsWoW64: Boolean;
 {$IFDEF 32bit}
 type     
   TIsWoW64Process = Function(hProcess: THandle; Wow64Process: PBOOL): BOOL; stdcall;
- var
+var
   ModuleHandle:   THandle;
   IsWoW64Process: TIsWoW64Process;
   ResultValue:    BOOL;
