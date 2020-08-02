@@ -15,7 +15,7 @@
 
   Version 1.2.2 (2019-10-02)
 
-  Last change 2020-03-06
+  Last change 2020-08-02
 
   ©2016-2019 František Milt  
 
@@ -52,7 +52,7 @@ unit WinRawInput;
 {$IFEND}
 
 {$IFDEF FPC}
-  {$MODE ObjFPC}{$H+}
+  {$MODE ObjFPC}
   {$INLINE ON}
   {$DEFINE CanInline}
   {$DEFINE FPC_DisableWarns}
@@ -64,6 +64,7 @@ unit WinRawInput;
     {$UNDEF CanInline}
   {$IFEND}
 {$ENDIF}
+{$H+}
 
 interface
 
