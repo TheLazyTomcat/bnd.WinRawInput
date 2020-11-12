@@ -15,7 +15,7 @@
 
   Version 1.2.2 (2019-10-02)
 
-  Last change 2020-08-02
+  Last change 2020-11-12
 
   ©2016-2019 František Milt  
 
@@ -40,11 +40,11 @@
 unit WinRawInput;
 
 {$IF defined(CPU64) or defined(CPU64BITS)}
-  {$DEFINE 64bit}
+  {$DEFINE CPU64bit}
 {$ELSEIF defined(CPU16)}
   {$MESSAGE FATAL 'Unsupported CPU.'}
 {$ELSE}
-  {$DEFINE 32bit}
+  {$DEFINE CPU32bit}
 {$IFEND}
 
 {$IF not(defined(MSWINDOWS) or defined(WINDOWS))}
@@ -589,7 +589,7 @@ end;
 Function RAWINPUT_ALIGN(x: Pointer): Pointer;
 begin
 {$IFDEF FPCDWM}{$PUSH}W4055{$ENDIF}
-{$IFDEF 64bit}
+{$IFDEF CPU64bit}
 Result := Pointer((PtrUInt(x) + (SizeOf(QWORD) - 1)) and not (SizeOf(QWORD) - 1));
 {$ELSE}
 Result := Pointer((PtrUInt(x) + (SizeOf(DWORD) - 1)) and not (SizeOf(DWORD) - 1));
@@ -671,7 +671,7 @@ end;
 //------------------------------------------------------------------------------
 
 Function IsWoW64: Boolean;
-{$IFDEF 32bit}
+{$IFDEF CPU32bit}
 type     
   TIsWoW64Process = Function(hProcess: THandle; Wow64Process: PBOOL): BOOL; stdcall;
 var
